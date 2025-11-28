@@ -1,4 +1,4 @@
-name: Deploy to GitHub Pages
+name: Build and deploy to GitHub Pages
 on:
   push:
     branches:
@@ -9,22 +9,39 @@ permissions:
   pages: write
   id-token: write
 
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Use Node.js
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 18
         uses: actions/setup-node@v4
         with:
           node-version: 18
+
       - name: Install dependencies
         run: npm ci
+
       - name: Build
         run: npm run build
-      - name: Deploy to Pages
+
+      - name: Prepare 404 fallback (optional)
+        run: |
+          # Copy index.html to 404.html so client-side routing works on refresh
+          cp dist/index.html dist/404.html || true
+
+      - name: Configure GitHub Pages
         uses: actions/configure-pages@v4
-      - name: Upload artifact
+
+      - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v1
         with:
           path: ./dist
+
+# GitHub will automatically deploy the uploaded artifact to Pages.
